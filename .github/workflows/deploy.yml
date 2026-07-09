@@ -1,0 +1,36 @@
+name: Deploy to Droplet
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          script: |
+            if [ ! -d ~/taxonomy-mcp/.git ]; then
+              git clone https://github.com/kylelynch/taxonomy-mcp.git ~/taxonomy-mcp
+            fi
+            cd ~/taxonomy-mcp
+            git pull origin main
+            docker build -t taxonomy-mcp .
+            docker rm -f taxonomy-mcp 2>/dev/null || true
+            docker run -d --restart always -p 3004:3002 --memory=192m --name taxonomy-mcp taxonomy-mcp
