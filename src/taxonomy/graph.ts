@@ -70,3 +70,79 @@ export function unlocksOf(
   requireKnown(ix, id);
   return walk(ix, id, (i) => ix.dependentEdges.get(i)!, (e) => e.topicId, opts.transitive ?? false, 'all');
 }
+
+export interface SoftGap { prerequisite: TopicSummary; reason: string; }
+export interface FrontierEntry extends TopicSummary { softGaps: SoftGap[]; }
+
+export function frontierFor(
+  ix: TaxonomyIndex, masteredIds: string[],
+  opts: { subject?: string; ageMax?: number; limit?: number } = {},
+): { frontier: FrontierEntry[]; totalCount: number; unknownMasteredIds: string[] } {
+  const unknownMasteredIds = masteredIds.filter((id) => !ix.byId.has(id));
+  const mastered = new Set(masteredIds);
+  const entries: FrontierEntry[] = [];
+  for (const t of ix.topics) {
+    if (mastered.has(t.id)) continue;
+    if (opts.subject !== undefined && t.subject !== opts.subject) continue;
+    if (opts.ageMax !== undefined && t.ageRangeStart > opts.ageMax) continue;
+    const edges = ix.prereqEdges.get(t.id)!;
+    if (edges.some((e) => e.strength === 'hard' && !mastered.has(e.prerequisiteId))) continue;
+    const softGaps = edges
+      .filter((e) => e.strength === 'soft' && !mastered.has(e.prerequisiteId))
+      .map((e) => ({ prerequisite: summarize(ix.byId.get(e.prerequisiteId)!), reason: e.reason }));
+    entries.push({ ...summarize(t), softGaps });
+  }
+  entries.sort((a, b) => b.centrality - a.centrality);
+  const limit = opts.limit ?? 100;
+  return { frontier: entries.slice(0, limit), totalCount: entries.length, unknownMasteredIds };
+}
+
+export interface PathStep extends TopicSummary {
+  requirement: 'required' | 'recommended' | 'goal';
+  unlocksInPath: { id: string; name: string; strength: 'hard' | 'soft'; reason: string }[];
+}
+
+/** BFS upward from `startId`, following edges that pass `pred`, stopping at mastered topics. */
+function ancestorsThrough(
+  ix: TaxonomyIndex, startId: string, mastered: Set<string>,
+  pred: (e: DependencyEdge) => boolean,
+): Set<string> {
+  const seen = new Set<string>();
+  const stack = [startId];
+  while (stack.length > 0) {
+    const id = stack.pop()!;
+    for (const e of ix.prereqEdges.get(id)!) {
+      if (!pred(e)) continue;
+      const p = e.prerequisiteId;
+      if (mastered.has(p) || seen.has(p)) continue;
+      seen.add(p);
+      stack.push(p);
+    }
+  }
+  return seen;
+}
+
+export function pathTo(
+  ix: TaxonomyIndex, goalId: string, masteredIds: string[] = [],
+): { steps: PathStep[]; goalAlreadyMastered: boolean } {
+  if (!ix.byId.has(goalId)) throw new Error(`unknown topic: ${goalId}`);
+  const mastered = new Set(masteredIds);
+  if (mastered.has(goalId)) return { steps: [], goalAlreadyMastered: true };
+
+  const required = ancestorsThrough(ix, goalId, mastered, (e) => e.strength === 'hard');
+  const all = ancestorsThrough(ix, goalId, mastered, () => true);
+  const pathSet = new Set([...all, goalId]);
+
+  const orderedIds = [...all].sort((a, b) => ix.topoRank.get(a)! - ix.topoRank.get(b)!);
+  const step = (id: string, requirement: PathStep['requirement']): PathStep => ({
+    ...summarize(ix.byId.get(id)!),
+    requirement,
+    unlocksInPath: ix.dependentEdges.get(id)!
+      .filter((e) => pathSet.has(e.topicId))
+      .map((e) => ({ id: e.topicId, name: ix.byId.get(e.topicId)!.name, strength: e.strength, reason: e.reason })),
+  });
+
+  const steps = orderedIds.map((id) => step(id, required.has(id) ? 'required' : 'recommended'));
+  steps.push(step(goalId, 'goal'));
+  return { steps, goalAlreadyMastered: false };
+}
