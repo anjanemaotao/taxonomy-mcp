@@ -64,15 +64,19 @@ All tools are read-only and zod-validated.
 
 | Tool | Input | Output |
 |---|---|---|
-| `search_topics` | `query?`, `subject?`, `domain?`, `ageMin?`, `ageMax?`, `type?`, `limit?` (default 20, max 100) | ranked topic summaries (id, name, subject, domain, ages, type, centrality, snippet) |
+| `search_topics` | `query?`, `subject?`, `domain?`, `ageMin?`, `ageMax?`, `type?`, `limit?` (default 20, max 100) | ranked topic summaries (id, name, subject, domain, ages, type, centrality, snippet); with no `query`, filtered results sort by centrality |
 | `get_topic` | `id` | full record (description, evidence, assessment prompt, centrality, ages, standards) + direct prereq/unlock counts |
 | `prerequisites_of` | `id`, `transitive?` (default false), `strength?` (`hard`/`soft`/`all`, default `all`) | prerequisite edges with the human-written `reason` strings; transitive results are topologically ordered with depth |
 | `unlocks` | `id`, `transitive?` | dependent topics with reasons (what this topic enables) |
-| `frontier_for` | `masteredIds[]` (max 2,000), `subject?`, `ageMax?` | topics whose hard prerequisites are all mastered and which are not themselves mastered; unmet soft prerequisites surfaced as readiness notes |
+| `frontier_for` | `masteredIds[]` (max 2,000), `subject?`, `ageMax?` | topics whose hard prerequisites are all mastered and which are not themselves mastered; `ageMax` filters on `ageRangeStart <= ageMax`; unmet soft prerequisites surfaced as readiness notes |
 | `path_to` | `goalId`, `masteredIds[]?` (default empty) | topologically ordered study path through unmastered prerequisites to the goal, hard/soft annotated with reasons |
 | `assess_topic` | `id`, `childName?` | assessment prompt with `{{name}}` filled (generic phrasing when omitted) + evidence criteria + age range |
 | `taxonomy_overview` | (none) | subjects, domains per subject, topic/edge counts, age coverage, taxonomy version + attribution |
-| `standards_lookup` | `topicId?` XOR `standardCode?`, `curriculum?` | standards alignments in both directions (NGSS, Common Core, UK National Curriculum) |
+| `standards_lookup` | `topicId?` XOR `standardCode?`, `curriculum?` | standards alignments in both directions; the reverse (code -> topics) index is built at boot from the topics' `standards` arrays |
+
+Standards coverage is partial: 818 of 1,590 topics carry codes, prefixed by curriculum slug (e.g. `ccss-ela:L.K.1f`, `uk-nc-2013:Eng.App2.Y1.Sent.2`).
+Curricula include CCSS Math and ELA, NGSS K-5, the UK National Curriculum, IB PYP PSPE, and the C3 Framework.
+`standards_lookup` and `get_topic` must state clearly when a topic simply has no alignments so agents do not read absence as an error.
 
 ## Resources
 
