@@ -54,6 +54,11 @@ export function loadData(dataDir: string = DEFAULT_DATA_DIR): RawData {
   check(ids.size === topics.length, 'duplicate topic ids');
   for (const t of topics) {
     check(t.assessmentPrompt.length > 0, `topic ${t.id} has no assessmentPrompt`);
+    check(typeof t.name === 'string' && t.name.length > 0, `topic ${t.id} has invalid name`);
+    check(typeof t.subject === 'string' && t.subject.length > 0, `topic ${t.id} has invalid subject`);
+    check(typeof t.domain === 'string' && t.domain.length > 0, `topic ${t.id} has invalid domain`);
+    check(Number.isFinite(t.ageRangeStart) && Number.isFinite(t.ageRangeEnd), `topic ${t.id} has invalid age range`);
+    check(Number.isFinite(t.centrality), `topic ${t.id} has invalid centrality`);
   }
   for (const d of dependencies) {
     check(ids.has(d.topicId), `edge references unknown topicId ${d.topicId}`);
