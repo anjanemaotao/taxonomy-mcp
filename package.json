@@ -1,0 +1,30 @@
+{
+  "name": "taxonomy-mcp",
+  "version": "1.0.0",
+  "description": "MCP server for Marble's open skill taxonomy (os-taxonomy): curriculum knowledge graph tools for AI agents",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "tsx src/stdio.ts",
+    "dev:http": "tsx src/http.ts",
+    "build": "tsc",
+    "start": "node dist/http.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "update-data": "tsx scripts/update-data.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.0",
+    "express": "^4.21.2",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^24.0.0",
+    "ajv": "^8.17.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
