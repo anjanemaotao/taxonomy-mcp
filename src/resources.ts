@@ -1,5 +1,21 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { TaxonomyIndex } from './taxonomy/index.js';
+import { ATTRIBUTION } from './attribution.js';
+
+/**
+ * The whole graph in one lean JSON payload, for map/visualization clients.
+ * Edges omit reasons and topics omit descriptions on purpose; the tools
+ * (get_topic, prerequisites_of, unlocks) remain the source for rich detail.
+ */
+function renderGraph(ix: TaxonomyIndex): string {
+  const topics = ix.topics.map(({ id, name, subject, domain, type, ageRangeStart, ageRangeEnd, centrality }) => (
+    { id, name, subject, domain, type, ageRangeStart, ageRangeEnd, centrality }
+  ));
+  const edges = [...ix.prereqEdges.values()].flat().map(({ topicId, prerequisiteId, strength }) => (
+    { topicId, prerequisiteId, strength }
+  ));
+  return JSON.stringify({ taxonomyVersion: ix.manifest.taxonomyVersion, attribution: ATTRIBUTION, topics, edges });
+}
 
 function renderClusters(subject: string, ix: TaxonomyIndex): string {
   const clusters = ix.clusters.filter((c) => c.subject === subject);
@@ -34,6 +50,14 @@ export function registerTaxonomyResources(server: McpServer, ix: TaxonomyIndex):
     'taxonomy://about',
     { title: 'About taxonomy-mcp', description: 'Dataset provenance, version, license, attribution.', mimeType: 'text/markdown' },
     async (uri) => ({ contents: [{ uri: uri.href, mimeType: 'text/markdown', text: renderAbout(ix) }] }),
+  );
+
+  const graphJson = renderGraph(ix);
+  server.registerResource(
+    'graph',
+    'taxonomy://graph',
+    { title: 'Full taxonomy graph', description: 'Every topic summary and prerequisite edge in one JSON payload, for building maps and visualizations. Lean by design: reasons and descriptions live behind the tools.', mimeType: 'application/json' },
+    async (uri) => ({ contents: [{ uri: uri.href, mimeType: 'application/json', text: graphJson }] }),
   );
 
   const subjects = [...new Set(ix.clusters.map((c) => c.subject))].sort();

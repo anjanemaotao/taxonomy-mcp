@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { ATTRIBUTION } from './attribution.js';
 import type { TaxonomyIndex } from './taxonomy/index.js';
 import {
   frontierFor, pathTo, prerequisitesOf, summarize, unlocksOf, type StrengthFilter, type TopicSummary,
@@ -47,10 +48,6 @@ function guarded<A>(fn: (args: A) => ReturnType<typeof ok>) {
     }
   };
 }
-
-const ATTRIBUTION =
-  'Data: Marble Skill Taxonomy (c) Marble (Generative Spark, Inc.), https://github.com/withmarbleapp/os-taxonomy. ' +
-  'ODbL 1.0 (database) + CC BY-SA 4.0 (content).';
 
 export function registerTaxonomyTools(server: McpServer, ix: TaxonomyIndex): void {
   server.registerTool('search_topics', {
