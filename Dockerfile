@@ -1,7 +1,7 @@
 # taxonomy-mcp - stateless streamable-HTTP MCP server (port 3002).
 
 # ---- Stage 1: build ----
-FROM node:24-alpine AS build
+FROM node:24.22.1-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -10,7 +10,7 @@ COPY src/ ./src/
 RUN npm run build
 
 # ---- Stage 2: runtime ----
-FROM node:24-alpine
+FROM node:24.22.1-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53
 WORKDIR /app
 ENV NODE_ENV=production
 COPY package.json package-lock.json ./
